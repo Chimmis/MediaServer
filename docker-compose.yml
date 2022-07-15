@@ -1,0 +1,84 @@
+version: '2'
+services:
+    plex:
+        image: linuxserver/plex
+        container_name: plex
+        volumes:
+            - ${CONFIG_PLEX}:/config
+            - ${FOLDERS_MOVIES}:/data/movies
+            - ${FOLDERS_TV}:/data/tvshows
+            - ${FOLDERS_TRANSCODE}:/data/transcode
+        restart: always
+        environment:
+            - VERSION=latest
+            - TZ=Europe/Vilnius
+        ports:
+          - 32400:32400
+        networks:
+            - plex-network
+    sonarr:
+        image: linuxserver/sonarr
+        container_name: sonarr
+        volumes:
+            - ${CONFIG_SONARR}:/config
+            - ${FOLDERS_DOWNLOADS}:/downloads
+            - ${FOLDERS_TV}:/tv
+        environment:
+            - TZ=Europe/Vilnius
+        ports:
+            - 8989:8989
+        networks:
+            - plex-network
+    radarr:
+        image: linuxserver/radarr
+        container_name: radarr
+        volumes:
+            - ${CONFIG_RADARR}:/config
+            - ${FOLDERS_DOWNLOADS}:/downloads
+            - ${FOLDERS_MOVIES}:/movies
+        environment:
+            - TZ=Europe/Vilnius
+        ports:
+            - 7878:7878
+        networks:
+            - plex-network
+    client:
+        image: wernight/qbittorrent
+        container_name: download_client
+        volumes:
+            - ${CONFIG_TORRENT}:/config
+            - ${FOLDERS_TORRENT}:/torrents
+            - ${FOLDERS_DOWNLOADS}:/downloads
+        ports:
+            - 8080:8080
+            - 6881:6881/tcp
+            - 6881:6881/udp
+        networks:
+            - plex-network
+    jackett:
+        image: lscr.io/linuxserver/jackett
+        container_name: jackett
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=Europe/Europe
+        - AUTO_UPDATE=true
+        volumes:
+        - ${CONFIG_JACKETT}:/config
+        - ${FOLDERS_DOWNLOADS}:/downloads
+        ports:
+        - 9117:9117
+        restart: unless-stopped
+        networks:
+            - plex-network
+    watchtower:
+        image: v2tec/watchtower
+        container_name: watchtower
+        restart: always
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        networks:
+            - plex-network
+networks:
+    plex-network:
+        driver: bridge
